@@ -1,48 +1,3 @@
-resource "aws_iam_role" "my_replication" {
-  name = var.iam_role_name 
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "s3.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-}
-
-
-
-
-resource "aws_kms_key" "my_s3_kms_key" {
-  description             = var.key_description 
-  enable_key_rotation     = true
-  deletion_window_in_days = var.deletion_window_in_days 
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Id": "key-default-1",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::523727612337:root"
-      },
-      "Action": "kms:*",
-      "Resource": "*"
-    }
-  ]
-}
-EOF
-}
-
 resource "aws_s3_bucket" "first" {
   bucket = var.first_bucket_name  
   acl    = var.acl  
@@ -82,7 +37,6 @@ resource "aws_s3_bucket_logging" "example" {
   target_prefix = var.target_prefix  
 }
 
-
 resource "aws_s3_bucket_lifecycle_configuration" "lifecycle_config" {
   bucket = aws_s3_bucket.first.id
 
@@ -95,35 +49,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "lifecycle_config" {
     }
   }
 }
-
-data "aws_iam_policy_document" "topic" {
-  statement {
-    effect = var.effect   
-
-    principals {
-      type        = var.type  
-      identifiers = var.identifiers 
-    }
-
-    actions   = var.actions   
-    resources = var.resources   
-
-    condition {
-      test     = var.condition_test     
-      variable = var.condition_variable    
-      values   = [aws_s3_bucket.first.arn, aws_s3_bucket.second.arn]
-    }
-  }
-}
-
-
-resource "aws_sns_topic" "snstopic" {
-  name = var.sns_topic_name    
-  policy = data.aws_iam_policy_document.topic.json
-
-  kms_master_key_id = aws_kms_key.my_s3_kms_key.arn
-}
-
 
 resource "aws_sns_topic_subscription" "email_subscription" {
   topic_arn = aws_sns_topic.snstopic.arn
@@ -139,8 +64,6 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
     events        = var.bucket_notification_events     
   }
 }
-
-
 
 resource "aws_s3_bucket" "second" {
   bucket = var.second_bucket_name    
@@ -195,8 +118,6 @@ resource "aws_s3_bucket_replication_configuration" "first" {
     }
   }
 }
-
-
 
 resource "aws_s3_bucket_replication_configuration" "second" {
   depends_on = [aws_s3_bucket_versioning.versioningexample_2]
